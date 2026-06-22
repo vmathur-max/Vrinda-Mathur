@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contract-to-Revenue Pipeline</title>
+<style>
+  :root{
+    --bg:#f6f7f9;
+    --ink:#1c2733;
+    --muted:#7d8794;
+    --line:#e4e8 ed;
+    --line:#e4e8ed;
+    --blue1:#5fa8e0;
+    --blue2:#2f7dc4;
+    --blue3:#1a4f86;
+    --navy:#14365e;
+    --amber:#e8a24a;
+    --amber-d:#b5781f;
+    --green:#1f9e75;
+    --green-d:#0f6e56;
+    --red:#d8513f;
+    --panel:#ffffff;
+    --dim:0.34;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;cursor:default;user-select:none;
+    display:flex;align-items:center;justify-content:center;min-height:100vh;
+  }
+  .wrap{
+    width:1500px;max-width:97vw;
+    display:grid;grid-template-columns:1fr 360px;gap:30px;
+    padding:30px 34px;align-items:start;
+  }
+  .left{position:relative;}
+  .head{margin-bottom:6px;}
+  .head h1{font-size:25px;font-weight:600;margin:0;letter-spacing:-0.01em;}
+  .head p{font-size:14px;color:var(--muted);margin:5px 0 0;}
+  .progress{font-size:12.5px;letter-spacing:0.06em;color:var(--muted);font-weight:600;margin:14px 0 2px;height:16px;}
+
+  svg.path{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;}
+  .flow{position:relative;z-index:1;margin-top:6px;}
+
+  .row{display:flex;gap:0;align-items:flex-start;}
+  .bubble-wrap{
+    width:25%;display:flex;flex-direction:column;align-items:center;text-align:center;
+    cursor:pointer;padding:0 6px;
+  }
+  .blabel{font-size:14px;font-weight:600;line-height:1.25;margin-bottom:10px;min-height:34px;display:flex;align-items:flex-end;}
+  .bubble{
+    width:86px;height:86px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:#cdd6df;color:#fff;position:relative;
+    opacity:var(--dim);
+    transition:opacity .4s ease, transform .4s ease, box-shadow .4s ease, background .4s ease;
+  }
+  .bubble svg{width:38px;height:38px;stroke:#fff;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}
+  .bubble-wrap.on .bubble{opacity:1;transform:scale(1.08);box-shadow:0 8px 22px rgba(20,54,94,.28);}
+  .bubble-wrap.done .bubble{opacity:1;}
+  .bcap{font-size:12px;color:var(--muted);margin-top:9px;line-height:1.35;min-height:30px;}
+
+  /* color tiers along the flow */
+  .b0 .bubble{background:var(--blue1);}
+  .b1 .bubble{background:var(--blue1);}
+  .b2 .bubble{background:var(--blue2);}
+  .b3 .bubble{background:var(--blue2);}
+  .b4 .bubble{background:var(--blue3);}
+  .b5 .bubble{background:var(--blue3);}
+  .b6 .bubble{background:var(--amber);}      /* gate locked */
+  .b6.on .bubble, .b6.done .bubble{background:var(--green);} /* gate opens */
+  .b7 .bubble{background:var(--green-d);}
+
+  .spacer{width:25%;}
+
+  /* nightly bar */
+  .nightly{
+    margin-top:26px;display:flex;align-items:center;gap:15px;
+    background:var(--panel);border:1px dashed #cfd6de;border-radius:14px;
+    padding:15px 20px;opacity:.5;
+    transition:all .45s ease;
+  }
+  .nightly .nb{
+    width:44px;height:44px;border-radius:11px;flex:0 0 44px;
+    background:#eef1f4;color:var(--muted);display:flex;align-items:center;justify-content:center;
+  }
+  .nightly .nb svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+  .nightly .nt{font-size:16px;font-weight:600;}
+  .nightly .ns{font-size:13px;color:var(--muted);margin-top:2px;}
+  .nightly .ntool{margin-left:auto;font-size:12px;color:var(--muted);background:#f1f4f7;border:1px solid #e4e8ed;border-radius:6px;padding:5px 11px;}
+  .nightly.lit{opacity:1;border:2px solid var(--green-d);box-shadow:0 0 0 4px rgba(31,158,117,.13);animation:pulse 1.2s ease 1;}
+  .nightly.lit .nb{background:var(--green-d);color:#fff;}
+  .nightly.lit .ntool{color:var(--green-d);background:rgba(31,158,117,.12);border-color:rgba(31,158,117,.3);}
+  @keyframes pulse{0%{box-shadow:0 0 0 4px rgba(31,158,117,.13);}50%{box-shadow:0 0 0 10px rgba(31,158,117,.05);}100%{box-shadow:0 0 0 4px rgba(31,158,117,.13);}}
+
+  /* right detail panel */
+  .panel{
+    background:var(--panel);border:1px solid #e4e8ed;border-radius:16px;
+    padding:24px 24px 26px;min-height:430px;position:sticky;top:30px;
+    box-shadow:0 4px 24px rgba(20,54,94,.06);
+  }
+  .panel .pnum{font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--muted);}
+  .panel .ptitle{font-size:21px;font-weight:600;margin:8px 0 4px;line-height:1.2;}
+  .panel .ptool{
+    display:inline-block;font-size:12.5px;font-weight:600;
+    padding:5px 12px;border-radius:7px;margin:6px 0 18px;
+    background:#eef3f9;color:var(--blue3);border:1px solid #dbe7f3;
+  }
+  .panel .pbody{font-size:15px;line-height:1.65;color:#3a4654;}
+  .panel .pdivider{height:1px;background:#eef1f4;margin:18px 0;}
+  .panel .prhs-label{font-size:11.5px;font-weight:700;letter-spacing:.07em;color:var(--amber-d);text-transform:uppercase;margin-bottom:5px;}
+  .panel .prhs{font-size:14px;line-height:1.6;color:#5a6573;}
+  .panel.gateOpen .ptool{background:rgba(31,158,117,.1);color:var(--green-d);border-color:rgba(31,158,117,.3);}
+  .panel .pintro{font-size:15px;line-height:1.7;color:#5a6573;}
+  .panel .pintro b{color:var(--ink);font-weight:600;}
+
+  .hint{font-size:12.5px;color:#aab2bc;margin-top:18px;text-align:center;transition:opacity .3s;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="left">
+    <div class="head">
+      <h1>Contract&ndash;to&ndash;revenue pipeline</h1>
+      <p>Every signed contract reaches revenue the same controlled way &mdash; with a memo behind it.</p>
+    </div>
+    <div class="progress" id="progress">&nbsp;</div>
+
+    <div class="flow" id="flow">
+      <svg class="path" id="pathsvg" preserveAspectRatio="none"></svg>
+
+      <div class="row" id="rowTop"></div>
+      <div class="row" id="rowBottom" style="margin-top:30px;"></div>
+    </div>
+
+    <div class="nightly" id="nightly">
+      <div class="nb" id="nb"></div>
+      <div>
+        <div class="nt">Nightly check &mdash; the safety net</div>
+        <div class="ns">Compares NetSuite, Salesforce &amp; SharePoint &mdash; flags anything that doesn&rsquo;t line up, before morning</div>
+      </div>
+      <div class="ntool">Python script</div>
+    </div>
+
+    <div class="hint" id="hint">click each step in order &middot; or use &rarr; / &larr; keys</div>
+  </div>
+
+  <div class="panel" id="panel">
+    <div class="pintro" id="pintro">
+      <b>Walk a contract from signature to recognized revenue.</b><br><br>
+      Click the first step &mdash; or press the right-arrow key &mdash; and each stage lights up with the tool that runs it and what happens to this deal. The contract moves along the path as you go.<br><br>
+      The one rule the whole design protects: revenue is only recognized once an ASC&nbsp;606 memo is complete.
+    </div>
+    <div id="pcontent" style="display:none;">
+      <div class="pnum" id="pnum"></div>
+      <div class="ptitle" id="ptitle"></div>
+      <div class="ptool" id="ptool"></div>
+      <div class="pbody" id="pbody"></div>
+      <div class="pdivider"></div>
+      <div class="prhs-label">On the RHS contract</div>
+      <div class="prhs" id="prhs"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  var I={
+    pen:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+    inbox:'<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13l3.5 7v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-6Z"/>',
+    tag:'<path d="M20.6 13.4 12 22l-9-9V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.3"/>',
+    doc:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h8"/>',
+    check:'<circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.3 2.3 4.7-4.6"/>',
+    folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
+    lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+    lockopen:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/>',
+    chart:'<path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/>',
+    radar:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12 18.4 5.6"/><circle cx="12" cy="12" r="1"/>'
+  };
+
+  var steps=[
+    {t:"Before signing",cap:"flag the risky terms",tool:"Harvey AI",ic:I.pen,
+     body:"Harvey reads the draft contract before anyone signs and flags the terms that drive accounting risk. Catching them now is far cheaper than fixing them after signature.",
+     rhs:"Flags the 60-day no-penalty exit, the $200k upfront fee, the tiered pricing and the bundled services."},
+    {t:"Ingestion",cap:"capture every contract",tool:"DocuSign \u00b7 Salesforce \u00b7 Document AI",ic:I.inbox,
+     body:"Signing kicks off the workflow. Most contracts flow into Salesforce automatically; a Claude agent sweeps inboxes and drives for the ones that don\u2019t, and Document AI pulls the terms out. Salesforce becomes the single source of truth.",
+     rhs:"The signed contract and its key fields land in Salesforce, tagged \u2018memo required\u2019."},
+    {t:"Classify",cap:"sort by complexity",tool:"Claude agent",ic:I.tag,
+     body:"A Claude agent reads the contract and sorts it \u2014 standard, complex, or escalate. That routing decides how much human attention it needs and which memo path it follows.",
+     rhs:"Classified complex \u2014 four separate judgment calls to make."},
+    {t:"Draft memo",cap:"write it, grounded",tool:"Claude + ASC 606 retrieval",ic:I.doc,
+     body:"The memo isn\u2019t written from memory. The model first retrieves the actual ASC 606 text and writes only from what it pulled \u2014 so it can\u2019t invent a citation. It frames the analysis and flags every judgment call for a human.",
+     rhs:"Produces the 5-step memo with 4 open items flagged for the accountant to decide."},
+    {t:"Review & sign off",cap:"human owns the call",tool:"Salesforce approvals",ic:I.check,
+     body:"A human finishes the judgment calls and signs off. Standard contracts go to a senior manager; high-risk ones to the controller. Approval is recorded as a status in Salesforce.",
+     rhs:"Escalates to the controller because of the contract-term call. Memo marked approved."},
+    {t:"File",cap:"always findable",tool:"Zapier",ic:I.folder,
+     body:"The approved memo files itself to SharePoint automatically, tagged to the deal. The answer to \u2018where\u2019s the documentation for this contract\u2019 is always one lookup away \u2014 no one files by hand.",
+     rhs:"Memo filed against the RHS opportunity ID, auto-versioned."},
+    {t:"The gate",cap:"the control",tool:"NetSuite",ic:I.lock,gate:true,
+     body:"The control everything is built around. The revenue schedule still gets built, but it can\u2019t post to the P&L until Salesforce confirms the memo is approved. Until then the revenue sits parked in deferred \u2014 visible and on the books, just not recognized. The gate delays recognition; it never loses the revenue.",
+     rhs:"Memo is approved, so the gate opens \u2014 but recognition still waits for go-live."},
+    {t:"Recognize & book",cap:"revenue, on time",tool:"NetSuite",ic:I.chart,
+     body:"Recognition starts only when the service goes live. Revenue posts to the GL from that date, and the upfront fee releases over time. The timing is right because the system enforces it.",
+     rhs:"Starts April 2027 at go-live \u2014 not January 2026 at signing. The 15-month gap, handled by construction."}
+  ];
+
+  var topIdx=[0,1,2,3];   // left to right
+  var botIdx=[7,6,5,4];   // right to left (snake)
+
+  function buildRow(container, idxArr){
+    for(var k=0;k<idxArr.length;k++){
+      var i=idxArr[k];
+      var st=steps[i];
+      var w=document.createElement('div');
+      w.className='bubble-wrap b'+i;
+      w.id='bw-'+i;
+      w.setAttribute('data-i', i);
+      w.innerHTML=
+        '<div class="blabel">'+st.t+'</div>'+
+        '<div class="bubble"><svg viewBox="0 0 24 24">'+st.ic+'</svg></div>'+
+        '<div class="bcap">'+st.cap+'</div>';
+      container.appendChild(w);
+    }
+  }
+  buildRow(document.getElementById('rowTop'), topIdx);
+  buildRow(document.getElementById('rowBottom'), botIdx);
+
+  // nightly icon
+  document.getElementById('nb').innerHTML='<svg viewBox="0 0 24 24">'+I.radar+'</svg>';
+
+  var GATE=6;
+  var state=0, MAX=steps.length+1;
+  var progress=document.getElementById('progress');
+  var hint=document.getElementById('hint');
+  var nightly=document.getElementById('nightly');
+  var panel=document.getElementById('panel');
+  var pintro=document.getElementById('pintro');
+  var pcontent=document.getElementById('pcontent');
+
+  function gateIcon(open){
+    var el=document.querySelector('#bw-'+GATE+' .bubble svg');
+    if(el) el.innerHTML = open?I.lockopen:I.lock;
+  }
+
+  function setPanel(i){
+    if(i<0){ pintro.style.display='block'; pcontent.style.display='none'; panel.classList.remove('gateOpen'); return; }
+    pintro.style.display='none'; pcontent.style.display='block';
+    var st=steps[i];
+    document.getElementById('pnum').textContent='STEP '+(i+1)+' OF '+steps.length;
+    document.getElementById('ptitle').textContent=st.t;
+    document.getElementById('ptool').textContent=st.tool;
+    document.getElementById('pbody').innerHTML=st.body.replace(/&/g,'&amp;').replace('P&amp;L','P&L');
+    document.getElementById('prhs').textContent=st.rhs;
+    panel.classList.toggle('gateOpen', !!st.gate);
+  }
+
+  function render(){
+    for(var i=0;i<steps.length;i++){
+      var w=document.getElementById('bw-'+i);
+      w.classList.remove('on','done');
+      if(state>=1&&state<=steps.length){
+        if(i===state-1) w.classList.add('on');
+        else if(i<state-1) w.classList.add('done');
+      } else if(state===MAX){ w.classList.add('done'); }
+    }
+    // gate icon: open if we've reached or passed it
+    gateIcon( (state>=1 && (state-1)>=GATE) || state===MAX );
+
+    nightly.classList.toggle('lit', state===MAX);
+
+    if(state===0){ progress.innerHTML='&nbsp;'; setPanel(-1); hint.style.opacity=1; }
+    else if(state<=steps.length){ progress.textContent='STEP '+state+' / '+steps.length; setPanel(state-1); hint.style.opacity=0; }
+    else { progress.innerHTML='THE SAFETY NET'; hint.style.opacity=0;
+           // keep last panel but show nightly note
+           pintro.style.display='none'; pcontent.style.display='block';
+           document.getElementById('pnum').textContent='RUNS UNDERNEATH ALL OF IT';
+           document.getElementById('ptitle').textContent='Nightly reconciliation';
+           document.getElementById('ptool').textContent='Python script';
+           panel.classList.remove('gateOpen');
+           document.getElementById('pbody').innerHTML='Everything above is what\u2019s <i>supposed</i> to happen. This is how you find out when it doesn\u2019t. It compares the three systems every night and flags any mismatch \u2014 revenue running with no memo, or a contract nearing go-live with open questions still unanswered.';
+           document.getElementById('prhs').textContent='The gate prevents the problem; this detects it when something slips past. A control you have to trust to fire isn\u2019t a control.';
+    }
+    drawPath();
+  }
+
+  function center(el, root){
+    var r=el.getBoundingClientRect(), rr=root.getBoundingClientRect();
+    return {x:r.left-rr.left+r.width/2, y:r.top-rr.top+r.height/2};
+  }
+
+  function drawPath(){
+    var svg=document.getElementById('pathsvg');
+    var flow=document.getElementById('flow');
+    var W=flow.clientWidth, H=flow.clientHeight;
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    var order=[0,1,2,3,4,5,6,7];
+    var pts=[];
+    for(var k=0;k<order.length;k++){
+      var b=document.querySelector('#bw-'+order[k]+' .bubble');
+      pts.push(center(b, flow));
+    }
+    var d='';
+    for(var k=0;k<pts.length-1;k++){
+      var a=pts[k], c=pts[k+1];
+      if(k===3){ // top-right (idx3) down to bottom-right (idx4): vertical curve
+        var midY=(a.y+c.y)/2;
+        d+='M'+a.x+','+a.y+' C'+a.x+','+midY+' '+c.x+','+midY+' '+c.x+','+c.y+' ';
+      } else {
+        d+='M'+a.x+','+a.y+' L'+c.x+','+c.y+' ';
+      }
+    }
+    svg.innerHTML='<path d="'+d+'" fill="none" stroke="#d2dae3" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 9"/>';
+  }
+
+  function forward(){ if(state<MAX){state++;render();} }
+  function back(){ if(state>0){state--;render();} }
+
+  // click a bubble to jump to it; click elsewhere advances
+  document.querySelectorAll('.bubble-wrap').forEach(function(w){
+    w.addEventListener('click', function(e){
+      e.stopPropagation();
+      var i=parseInt(w.getAttribute('data-i'),10);
+      state=i+1; render();
+    });
+  });
+  document.body.addEventListener('click', forward);
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='Spacebar'){e.preventDefault();forward();}
+    else if(e.key==='ArrowLeft'){e.preventDefault();back();}
+  });
+  window.addEventListener('resize', render);
+  setTimeout(render, 60);
+</script>
+</body>
+</html>
